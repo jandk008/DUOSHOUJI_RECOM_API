@@ -1,49 +1,50 @@
-package sharingtoearn.zidane.chow.service;
+package recommendation.items.api.service;
 
 
 import java.util.List;
 
 import javax.swing.RepaintManager;
 
+import recommendation.items.api.client.JingdongAPIClient;
+import recommendation.items.api.client.TaobaoAPIClient;
+
 import com.taobao.api.ApiException;
 import com.taobao.api.DefaultTaobaoClient;
 import com.taobao.api.TaobaoClient;
 import com.taobao.api.domain.AitaobaoItem;
+import com.taobao.api.domain.AitaobaoItemDetail;
 import com.taobao.api.domain.Area;
+import com.taobao.api.domain.Item;
+import com.taobao.api.domain.ItemSearch;
 import com.taobao.api.request.AlibabaBaichuanAppcontentUploadRequest;
 import com.taobao.api.request.AreasGetRequest;
+import com.taobao.api.request.AtbItemsDetailGetRequest;
 import com.taobao.api.request.AtbItemsGetRequest;
+import com.taobao.api.request.AtbItemsRelateGetRequest;
 import com.taobao.api.request.ItemsGetRequest;
 import com.taobao.api.request.TimeGetRequest;
 import com.taobao.api.response.AlibabaBaichuanAppcontentUploadResponse;
 import com.taobao.api.response.AreasGetResponse;
+import com.taobao.api.response.AtbItemsDetailGetResponse;
 import com.taobao.api.response.AtbItemsGetResponse;
+import com.taobao.api.response.AtbItemsRelateGetResponse;
 import com.taobao.api.response.ItemsGetResponse;
 import com.taobao.api.response.TimeGetResponse;
 
-public class ServiceExecutor {
-	private static final String SERVER_URL = "http://gw.api.taobao.com/router/rest";
-	private static final String APP_KEY = "23362952";
-	private static final String APP_SECRET = "82c170b104e3bebf347e26633f7a3b1c";
+public class SearchItemsService {
 	
 	/**
 	 * 
-	 * @param serverUrl
-	 * @param appKey
-	 * @param appSecret
+	 * @param keywords
 	 */
-	public static void serviceExecute(String serverUrl, String appKey, String appSecret){
-		TaobaoClient client = new DefaultTaobaoClient(serverUrl, appKey, appSecret);
-		ItemsGetRequest request = new ItemsGetRequest();
-		request.setFields("num_iid,title,pict_url,small_images,"
-				+ "reserve_price,zk_final_price,user_type,provcity,item_url,seller_id,volume,nick");
-		request.setQ("Women");
-		try {
-			ItemsGetResponse response = client.execute(request);
-			System.out.println(response.getBody());
-		} catch (ApiException e) {
-			e.printStackTrace();
-			System.out.println("A exception has occurred");
+	public static void serviceExecute(String keywords){
+		TaobaoAPIClient client = new TaobaoAPIClient();
+		ItemSearch itemSearch = client.searchItems(keywords);
+		if(itemSearch.getItems().size() == 0){
+			return;
+		}
+		for (Item item : itemSearch.getItems()) {
+			System.out.println(item.getNick()+ " | " + item.getTitle() + " | " + item.getDetailUrl());
 		}
 	}
 	
@@ -61,37 +62,14 @@ public class ServiceExecutor {
 		try {
 			response = client.execute(request);
 			if (response.isSuccess()){
-				System.out.println(response.getBody());
+				System.out.println(response.getTime());
 			}
 		} catch (ApiException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
-	/**
-	 * 
-	 * @param serverUrl
-	 * @param appKey
-	 * @param appSecret
-	 */
-	public static void getAreaCode(String serverUrl, String appKey, String appSecret){
-		TaobaoClient client = new DefaultTaobaoClient(serverUrl, appKey, appSecret);
-		AreasGetRequest request = new AreasGetRequest();
-		request.setFields("id,type,name");
-		AreasGetResponse response;
-		try {
-			response = client.execute(request);
-			if (response.isSuccess()){
-				List<Area> areasList = response.getAreas();
-				for(Area area : areasList){
-					System.out.println(area.getName() +" | " + area.getZip() + " | " + area.getId());
-				}
-			}
-		} catch (ApiException e) {
-			e.printStackTrace();
-		}
-	}
+
 	/**
 	 * 
 	 * @param serverUrl
@@ -125,21 +103,37 @@ public class ServiceExecutor {
 	 * @param appKey
 	 * @param appSecret
 	 */
-	public static void searchATBItems(String serverUrl, String appKey, String appSecret){
-		TaobaoClient client = new DefaultTaobaoClient(serverUrl, appKey, appSecret);
+	public static void searchATBItems(){
 		AtbItemsGetRequest request = new AtbItemsGetRequest();
-		request.setFields("open_iid,title,click_url,promotion_price");
-//		request.setCid(123L);
+		request.setFields("open_iid,open_iid,title,promotion_price,commission");
 		request.setKeyword("PS4");
 		try {
-			AtbItemsGetResponse response = client.execute(request);
+			AtbItemsGetResponse response = TaobaoAPIClient.getClient().execute(request);
 			if (response.isSuccess()){
-				System.out.println("Size : " + response.getTotalResults());
+//				System.out.println("Size : " + response.getTotalResults());
 				List<AitaobaoItem> items = response.getItems();
+				StringBuffer openiids = new StringBuffer();
 				for (AitaobaoItem item : items){
-					System.out.println("Title : " + item.getTitle() + " | URL : " + item.getClickUrl() + " | Price : " + item.getPromotionPrice());
+					openiids.append(item.getOpenIid() + ",");
 				}
-				System.out.println(response.getBody());
+				AtbItemsRelateGetRequest request2 = new AtbItemsRelateGetRequest();
+				request2.setFields("title,click_url,commission");
+				request2.setOpenIid(items.get(39).getOpenIid());
+				request2.setRelateType(2l);
+//				request2.setOpenIids(openiids.toString());
+				AtbItemsRelateGetResponse response2 = TaobaoAPIClient
+						.getClient().execute(request2);
+//				List<AitaobaoItemDetail> aitaobaoItemDetails = response2
+//						.getAtbItemDetails();
+				List<AitaobaoItem> items2 = response2.getItems();
+				for (AitaobaoItem aitaobaoItemDetail : items2) {
+					if (!aitaobaoItemDetail.getClickUrl().equals("")){
+						System.out.println(aitaobaoItemDetail.getTitle());
+					}
+//					System.out.println("Title "
+//							+ aitaobaoItemDetail.getTitle() + " | "
+//							+ aitaobaoItemDetail.getClickUrl() + " | " + aitaobaoItemDetail.getCommission());
+				}
 			}
 		} catch (ApiException e) {
 			e.printStackTrace();
@@ -151,6 +145,8 @@ public class ServiceExecutor {
 //		ServiceExecutor.serviceExecute(SERVER_URL, APP_KEY, APP_SECRET);
 //		ServiceExecutor.uploadAppContent(SERVER_URL, APP_KEY, APP_SECRET);
 //		ServiceExecutor.getAreaCode(SERVER_URL, APP_KEY, APP_SECRET);
-		ServiceExecutor.searchATBItems(SERVER_URL, APP_KEY, APP_SECRET);
+//		ServiceExecutor.searchATBItems(SERVER_URL, APP_KEY, APP_SECRET);
+		JingdongAPIClient client = new JingdongAPIClient();
+		client.searchItems("PS4");
 	}
 }
