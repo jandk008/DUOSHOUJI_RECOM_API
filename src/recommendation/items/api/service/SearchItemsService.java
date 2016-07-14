@@ -105,26 +105,32 @@ public class SearchItemsService {
 	 */
 	public static void searchATBItems(){
 		AtbItemsGetRequest request = new AtbItemsGetRequest();
-		request.setFields("open_iid,open_iid,title,promotion_price,commission");
-		request.setKeyword("PS4");
+		request.setFields("open_iid,open_iid,title,promotion_price,price,commission, click_url");
+		request.setKeyword("分享经济");
 		try {
 			AtbItemsGetResponse response = TaobaoAPIClient.getClient().execute(request);
 			if (response.isSuccess()){
 //				System.out.println("Size : " + response.getTotalResults());
 				List<AitaobaoItem> items = response.getItems();
 				StringBuffer openiids = new StringBuffer();
-				for (AitaobaoItem item : items){
+				for(AitaobaoItem item : items){
+					double price = Double.parseDouble(item.getPromotionPrice());
+					if(!(price >23 && price < 25)){
+						continue;
+					}
+					System.out.println(item.getTitle() + " | " + item.getPromotionPrice() + " | " + item.getCommission()+ " | " + item.getClickUrl());
 					openiids.append(item.getOpenIid() + ",");
 				}
 				AtbItemsRelateGetRequest request2 = new AtbItemsRelateGetRequest();
 				request2.setFields("title,click_url,commission");
-				request2.setOpenIid(items.get(39).getOpenIid());
+				request2.setOpenIid(openiids.toString());
 				request2.setRelateType(2l);
 //				request2.setOpenIids(openiids.toString());
 				AtbItemsRelateGetResponse response2 = TaobaoAPIClient
 						.getClient().execute(request2);
 //				List<AitaobaoItemDetail> aitaobaoItemDetails = response2
 //						.getAtbItemDetails();
+				System.out.println(response2.getErrorCode() + " | " + response2.getSubMsg());
 				List<AitaobaoItem> items2 = response2.getItems();
 				for (AitaobaoItem aitaobaoItemDetail : items2) {
 					if (!aitaobaoItemDetail.getClickUrl().equals("")){
@@ -146,7 +152,8 @@ public class SearchItemsService {
 //		ServiceExecutor.uploadAppContent(SERVER_URL, APP_KEY, APP_SECRET);
 //		ServiceExecutor.getAreaCode(SERVER_URL, APP_KEY, APP_SECRET);
 //		ServiceExecutor.searchATBItems(SERVER_URL, APP_KEY, APP_SECRET);
-		JingdongAPIClient client = new JingdongAPIClient();
-		client.searchItems("PS4");
+//		JingdongAPIClient client = new JingdongAPIClient();
+//		client.searchItems("PS4");
+		SearchItemsService.searchATBItems();
 	}
 }
